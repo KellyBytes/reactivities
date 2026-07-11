@@ -1,14 +1,13 @@
 import type { SyntheticEvent } from 'react';
 import { Box, Button, Paper, TextField, Typography } from '@mui/material';
 import { useActivities } from '../../../lib/hooks/useActivities';
+import { Link, useNavigate, useParams } from 'react-router';
 
-type Props = {
-  activity?: Activity;
-  closeForm: () => void;
-};
-
-const ActivityForm = ({ activity, closeForm }: Props) => {
-  const { updateActivity, createActivity } = useActivities();
+const ActivityForm = () => {
+  const { id } = useParams();
+  const { updateActivity, createActivity, activity, isLoadingActivity } =
+    useActivities(id);
+  const navigate = useNavigate();
 
   const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -22,18 +21,23 @@ const ActivityForm = ({ activity, closeForm }: Props) => {
 
     if (activity) {
       data.id = activity.id;
-      await updateActivity.mutate(data as unknown as Activity);
-      closeForm();
+      await updateActivity.mutateAsync(data as unknown as Activity);
+      navigate(`/activities/${activity.id}`);
     } else {
-      await createActivity.mutate(data as unknown as Activity);
-      closeForm();
+      createActivity.mutate(data as unknown as Activity, {
+        onSuccess: id => {
+          navigate(`/activities/${id}`);
+        },
+      });
     }
   };
+
+  if (isLoadingActivity) return <Typography>Loading...</Typography>;
 
   return (
     <Paper sx={{ borderRadius: 3, padding: 3 }}>
       <Typography variant="h5" gutterBottom color="primary">
-        Create activity
+        {activity ? 'Edit activity' : 'Create activity'}
       </Typography>
       <Box
         component="form"
@@ -66,7 +70,7 @@ const ActivityForm = ({ activity, closeForm }: Props) => {
         <TextField name="city" label="City" defaultValue={activity?.city} />
         <TextField name="venue" label="Venue" defaultValue={activity?.venue} />
         <Box sx={{ display: 'flex', justifyContent: 'end', gap: 3 }}>
-          <Button onClick={closeForm} color="inherit">
+          <Button component={Link} to="/activities" color="inherit">
             Cancel
           </Button>
           <Button
